@@ -1,3 +1,7 @@
+"""
+Paho
+Checking error, publish again in 2s, publish again for 3 times
+"""
 import serial.tools.list_ports
 import sys
 import paho.mqtt.client as paho
@@ -57,25 +61,37 @@ def readSerial():
 
 
 # Publish and check error *******************************************************************************************
-pubInfo = {"iot-temp": [0, 0.0, True], "iot-led": [0, 0.0, True], "iot-pump": [0, 0.0, True]}
-#              value,time capture since publish, success publish?
+class FeedInfo:
+    def __init__(self):
+        self.payload = 0
+        self.time = 0.0  # time when publish
+        self.ready = True  # ready to publish
+        self.count = 0  # number of time we republish
+
+
+pubInfo = {"iot-temp": FeedInfo(), "iot-led": FeedInfo(), "iot-pump": FeedInfo()}
 
 
 def publish(feed, value):
     global pubInfo
-    if pubInfo[feed][2]:
+    if pubInfo[feed].ready:
+        pubInfo[feed].time = time.time()
+        pubInfo[feed].payload = value
+        pubInfo[feed].ready = False  # set the flag, the flag will turn true if receive a respond on time
         client.publish(feedPath+feed, value)
-        pubInfo[feed][1] = time.time()
-        pubInfo[feed][0] = value
-        pubInfo[feed][2] = False  # set the flag, the flag will turn true if receive a respond on time
 
 
 def checkPublish():
     for feed in feeds:
-        if pubInfo[feed][2] is False and time.time() - pubInfo[feed][1] > 3:  # resend after 2 second without response
-            print("Publish again to ", feed, " due to failure")
-            pubInfo[feed][2] = True
-            publish(feed, pubInfo[feed][0])
+        if (pubInfo[feed].ready is False) and (time.time() - pubInfo[feed].time > 3):  # resend after 2 second without response
+            pubInfo[feed].ready = True
+            if pubInfo[feed].count < 3:
+                pubInfo[feed].count += 1
+                print("Publish again to ", feed, " due to failure: ", pubInfo[feed].count, " time(s)")
+                publish(feed, pubInfo[feed].payload)
+            else:
+                print("Stop publish angain due to ", pubInfo[feed].count, " times of failure")
+                pubInfo[feed].count = 0
 
 
 # Callback function **************************************************************************************************
@@ -96,9 +112,9 @@ def on_subscribe(client, userdata, mid, granted_qos):
 def on_message(client, userdata, message):
     feed_id = message.topic.split("/")[2]
     payload = message.payload.decode("utf-8")
-    if not pubInfo[feed_id][2]:  # if we get the response of which feed we send to, means succesfully publish
+    if not pubInfo[feed_id].ready:  # if we get the response of which feed we send to, means succesfully publish
         print("Publish successfully to ", feed_id)
-        pubInfo[feed_id][2] = True
+        pubInfo[feed_id].ready = True
     else:
         print("Receive value ", payload, " from feed ", feed_id)
         ser.write(("!0:"+feed_id+":"+str(payload)+"#").encode())  # dataframe to send to arduino: !0:iot-temp:30#
@@ -131,5 +147,3 @@ while True:
     # client.publish(feedPath+feeds[2], random.randint(0, 100), qos=0)
     checkPublish()
     readSerial()
-    #time.sleep(1)
-
