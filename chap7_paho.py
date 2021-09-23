@@ -63,35 +63,48 @@ def readSerial():
 # Publish and check error *******************************************************************************************
 class FeedInfo:
     def __init__(self):
-        self.payload = 0
         self.time = 0.0  # time when publish
-        self.ready = True  # ready to publish
+        self.isPublishing = False  # ready to publish
         self.count = 0  # number of time we republish
+
+        self.queue = []
+
+    def init(self):
+        self.time = time.time()
+        self.isPublishing = True
+        self.count = 0
+
+    def resetForSendAgain(self):
+        self.time = time.time()
+        self.count = self.count + 1
 
 
 pubInfo = {"iot-temp": FeedInfo(), "iot-led": FeedInfo(), "iot-pump": FeedInfo()}
 
 
 def publish(feed, value):
-    global pubInfo
-    if pubInfo[feed].ready:
-        pubInfo[feed].time = time.time()
-        pubInfo[feed].payload = value
-        pubInfo[feed].ready = False  # set the flag, the flag will turn true if receive a respond on time
-        client.publish(feedPath+feed, value)
+    pubInfo[feed].queue.append(value)
+
 
 
 def checkPublish():
-    for feed in feeds:
-        if (pubInfo[feed].ready is False) and (time.time() - pubInfo[feed].time > 3):  # resend after 2 second without response
-            pubInfo[feed].ready = True
-            if pubInfo[feed].count < 3:
-                pubInfo[feed].count += 1
-                print("Publish again to ", feed, " due to failure: ", pubInfo[feed].count, " time(s)")
-                publish(feed, pubInfo[feed].payload)
-            else:
-                print("Stop publish angain due to ", pubInfo[feed].count, " times of failure")
-                pubInfo[feed].count = 0
+    for feed in feeds:  # frequently check publishing status of each feed
+        feedInfo = pubInfo[feed]
+        if not feedInfo.isPublishing and len(feedInfo.queue) > 0:  # if this feed is not publishing and have data in queue
+            print("Start sending value: ", feedInfo.queue[0], "to feed ", feed)
+            feedInfo.init()
+            client.publish(feedPath + feed+"m", feedInfo.queue[0])
+
+        elif feedInfo.isPublishing:  # if this feed is currently trying to publish
+            if feedInfo.count < 3:
+                if time.time() - feedInfo.time > 3:  # send again after 2s without response
+                    print("Sending again value: ", feedInfo.queue[0], "of feed ", feed, ". Time(s): ", feedInfo.count)
+                    feedInfo.resetForSendAgain()
+                    client.publish(feedPath + feed, feedInfo.queue[0])  # send again
+            else:  # stop sending again after 3 times
+                print("Stop sending again value: ", feedInfo.queue[0], "of feed ", feed)
+                feedInfo.queue.pop(0)
+                feedInfo.isPublishing = False
 
 
 # Callback function **************************************************************************************************
@@ -112,9 +125,10 @@ def on_subscribe(client, userdata, mid, granted_qos):
 def on_message(client, userdata, message):
     feed_id = message.topic.split("/")[2]
     payload = message.payload.decode("utf-8")
-    if not pubInfo[feed_id].ready:  # if we get the response of which feed we send to, means succesfully publish
-        print("Publish successfully to ", feed_id)
-        pubInfo[feed_id].ready = True
+    if pubInfo[feed_id].isPublishing:  # if we get the response from feed which is trying to publishing
+        print("Publish successfully value: ",payload," to feed ", feed_id)
+        pubInfo[feed_id].isPublishing = False
+        pubInfo[feed_id].queue.pop(0)
     else:
         print("Receive value ", payload, " from feed ", feed_id)
         ser.write(("!0:"+feed_id+":"+str(payload)+"#").encode())  # dataframe to send to arduino: !0:iot-temp:30#
@@ -144,6 +158,5 @@ ser = serial.Serial(port=getPort(), baudrate=115200)
 print("Connect successfully to Arduino...")
 
 while True:
-    # client.publish(feedPath+feeds[2], random.randint(0, 100), qos=0)
     checkPublish()
     readSerial()
