@@ -31,26 +31,23 @@ void loop() {
 
 
 
-
-//    receiveByte = Serial.read();
-//    if(receiveByte != '!')
-//    {
-//      //buttonState = receiveByte - 48;
-//      String mess = ""
-//      while(1)
-//      {
-//          if(Serial.available())
-//          {
-//            receiveByte = Serial.read();
-//            if(receiveByte == '#') break;
-//            mess += String(receiveByte);
-//          }
-//          for(int i = 0; i < 2; i++) {
-//            if(mess.indexOf(feeds[i]) != -1)
-//            {
-//              
-//            }  
-//          }
-//      }
-//      
-//    }
+// long long premil = millis();
+// void setup() {
+//   // put your setup code here, to run once:
+//   Serial.begin(115200);
+//   pinMode(13, OUTPUT);
+// }
+//
+// void loop() {
+//   if(millis() - premil > 5000)
+//   {
+//     premil = millis();
+//     String str1("!1:iot-temp:");
+//     str1 += String(random(20,40)) + String("#");
+//     Serial.print(str1);
+//
+//     String str2("!1:iot-humid:");
+//     str2 += String(random(60,100)) + String("#");
+//     Serial.print(str2);
+//   }
+// }

@@ -13,7 +13,7 @@ username = "phamdinhtrung"
 password = "aio_DNZB93UIb5X0iR6vDhD8EIteXdxd"
 
 feedPath = "phamdinhtrung/feeds/"
-feeds = ["iot-led", "iot-pump", "iot-temp"]
+feeds = ["iot-led", "iot-pump", "iot-temp", "iot-humid"]
 
 # Serial function **************************************************************************************************
 mess = ""
@@ -39,7 +39,7 @@ def processData(data):
     data = data.replace("#", "")
     splitData = data.split(":")
     #print(splitData)
-    if splitData[1] == "iot-temp":
+    if splitData[1] == "iot-temp" or splitData[1] == "iot-humid":
         print("Receive ", splitData, " from Arduino gateway. Ready to publish...")
         publish(splitData[1], splitData[2])
 
@@ -78,8 +78,10 @@ class FeedInfo:
         self.time = time.time()
         self.count = self.count + 1
 
-
-pubInfo = {"iot-temp": FeedInfo(), "iot-led": FeedInfo(), "iot-pump": FeedInfo()}
+# create pubInfo to store infomation of publishing
+pubInfo = {}
+for feed in feeds:
+    pubInfo[feed] = FeedInfo()
 
 
 def publish(feed, value):
@@ -93,7 +95,7 @@ def checkPublish():
         if not feedInfo.isPublishing and len(feedInfo.queue) > 0:  # if this feed is not publishing and have data in queue
             print("Start sending value: ", feedInfo.queue[0], "to feed ", feed)
             feedInfo.init()
-            client.publish(feedPath + feed+"m", feedInfo.queue[0])
+            client.publish(feedPath + feed, feedInfo.queue[0])
 
         elif feedInfo.isPublishing:  # if this feed is currently trying to publish
             if feedInfo.count < 3:
@@ -126,7 +128,7 @@ def on_message(client, userdata, message):
     feed_id = message.topic.split("/")[2]
     payload = message.payload.decode("utf-8")
     if pubInfo[feed_id].isPublishing:  # if we get the response from feed which is trying to publishing
-        print("Publish successfully value: ",payload," to feed ", feed_id)
+        print("Publish successfully value: ", payload, " to feed ", feed_id)
         pubInfo[feed_id].isPublishing = False
         pubInfo[feed_id].queue.pop(0)
     else:
