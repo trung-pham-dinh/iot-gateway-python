@@ -39,7 +39,7 @@ void setup()
   digitalWrite(PUMP, LOW);
   digitalWrite(LED, LOW);
   
-  Serial.begin(115200); // for receiver
+  //Serial.begin(115200); // for receiver
   
   myRadio.begin(); 
   myRadio.openWritingPipe(addresses[0]); // for transmit
@@ -84,6 +84,8 @@ void loop()
     String tempStr = "!0:iot-temp:" + String(int(humid_temp.temp)) + "#";
     String humidStr = "!0:iot-humid:" + String(int(humid_temp.humid)) + "#";
     //Serial.println(humid_temp.humid);
+    //Serial.println(tempStr);
+    //Serial.println(humidStr);
     const char *c_tempMess = tempStr.c_str();
     const char *c_humidMess = humidStr.c_str();
     myRadio.write(c_tempMess, tempStr.length());
