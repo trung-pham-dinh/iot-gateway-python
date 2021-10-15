@@ -15,6 +15,15 @@ password = "aio_DNZB93UIb5X0iR6vDhD8EIteXdxd"
 feedPath = "phamdinhtrung/feeds/"
 feeds = ["iot-led", "iot-pump", "iot-temp", "iot-humid"]
 
+# GPS data process function*****************************************************************************************
+
+def gps_process(raw_str):
+    raw_lat, raw_lon, raw_ele = raw_str.split(',') # lat: ddmm.mmmm, lon: dddmm.mmmm
+    str_lat = str(float(raw_lat[0:2]) + float(raw_lat[2:]) / 60)
+    str_lon = str(float(raw_lon[0:3]) + float(raw_lon[3:]) / 60)
+    str_ele = raw_ele
+    return [str_lat, str_lon, str_ele]
+
 # Serial function **************************************************************************************************
 mess = ""
 
@@ -42,6 +51,13 @@ def processData(data):
     if splitData[1] == "iot-temp" or splitData[1] == "iot-humid":
         print("Receive ", splitData, " from Arduino gateway. Ready to publish...")
         publish(splitData[1], splitData[2])
+    elif splitData[1] == "iot-gps":  # format to publish: https://learn.adafruit.com/adafruit-io/mqtt-api
+        lat_lon_ele = gps_process(splitData[2])
+        csv_format = "0," + lat_lon_ele[0] + "," + lat_lon_ele[1] + "," + lat_lon_ele[2]
+        print("Receive gps information: ",csv_format, "from Arduino gateway. Ready to publish")
+        client.publish(feedPath + "iot-gps/csv", csv_format)
+
+
 
 
 def readSerial():
