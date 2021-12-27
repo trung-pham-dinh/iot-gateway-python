@@ -10,7 +10,7 @@ import time
 broker = "io.adafruit.com"
 port = 1883
 username = "phamdinhtrung"
-password = "aio_DNZB93UIb5X0iR6vDhD8EIteXdxd"
+password = "aio_hVgd52hs37MysW0JymY1Z3UH46FB"
 
 feedPath = "phamdinhtrung/feeds/"
 feeds = ["iot-led", "iot-pump", "iot-temp", "iot-humid"]
@@ -154,7 +154,7 @@ def on_message(client, userdata, message):
 
 def on_disconnect(client):
     print("Disconnect...")
-    sys.exit (1)
+    sys.exit(1)
 
 
 # Setup callback function and client object ***************************************************************************

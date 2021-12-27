@@ -39,7 +39,7 @@ void setup()
   digitalWrite(PUMP, LOW);
   digitalWrite(LED, LOW);
   
-  //Serial.begin(115200); // for receiver
+//  Serial.begin(115200); // for receiver
   
   myRadio.begin(); 
   myRadio.openWritingPipe(addresses[0]); // for transmit
@@ -60,7 +60,7 @@ void loop()
   {
     char text[32] = "";
     myRadio.read(&text, sizeof(text));
-    //Serial.println(text);
+//    Serial.println(text);
     Package package = extract(String(text));
     if(package.feed == "iot-led")
     {

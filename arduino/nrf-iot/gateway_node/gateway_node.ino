@@ -1,13 +1,18 @@
 #include <SPI.h> 
 #include <nRF24L01.h>
 #include <RF24.h>
-
+#include "GTS_4E.h"
 
 RF24 myRadio(7, 8); // CE,CSN
 const byte addresses[][6] = {"00001", "00002"};
 //                            trans     receive
 
-long long preTime = millis();
+
+GPS gps(2,3,9600);
+String lat = gps.getGGA_Data(GGA_Latitude);
+String lon = gps.getGGA_Data(GGA_Longitude);
+String ele = gps.getGGA_Data(GGA_MSL_Altitude);
+long long premil = millis();
 
 
 void setup()
@@ -53,6 +58,18 @@ void loop()
       myRadio.stopListening();
       const char *c_mess = mess.c_str();
       myRadio.write(c_mess, mess.length());
+    }
+  }
+
+
+  gps.readGGA();
+  lat = gps.getGGA_Data(GGA_Latitude);
+  lon = gps.getGGA_Data(GGA_Longitude);
+  ele = gps.getGGA_Data(GGA_MSL_Altitude);
+  if(millis()-premil > 5000) {
+    premil = millis();
+    if(lat != "" && lon != "" && ele != "") {
+      Serial.println("!1:iot-gps:" + lat + "," + lon + "," + ele + "#");
     }
   }
 }
